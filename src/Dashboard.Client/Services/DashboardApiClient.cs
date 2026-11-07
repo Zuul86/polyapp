@@ -12,7 +12,7 @@ public sealed record HealthProbeResult(
 
 public sealed class DashboardApiClient(HttpClient httpClient)
 {
-    private static readonly IReadOnlyList<WidgetConfigDto> DefaultSeedWidgets =
+    private static readonly IReadOnlyList<WidgetConfigDto> OfflineFallbackWidgets =
     [
         new WidgetConfigDto
         {
@@ -61,30 +61,6 @@ public sealed class DashboardApiClient(HttpClient httpClient)
             IsPrivate = true,
             IsInternal = false,
             SortOrder = 10
-        },
-        new WidgetConfigDto
-        {
-            Id = "widget-cosmos-explorer",
-            Title = "Cosmos DB Data Explorer",
-            Description = "Inspect UserItems partitions (tokens, widgets, print-history) in Azure Portal.",
-            Url = "https://cosmos.azure.com",
-            Icon = "bi-database-lock",
-            Category = "Cloud Infra",
-            IsPrivate = true,
-            IsInternal = false,
-            SortOrder = 11
-        },
-        new WidgetConfigDto
-        {
-            Id = "widget-portainer",
-            Title = "Homelab Container Stack",
-            Description = "Private self-hosted container management and LAN reverse proxy.",
-            Url = "https://portainer.local:9443",
-            Icon = "bi-hdd-network",
-            Category = "Self-Hosted",
-            IsPrivate = true,
-            IsInternal = false,
-            SortOrder = 12
         }
     ];
 
@@ -112,13 +88,60 @@ public sealed class DashboardApiClient(HttpClient httpClient)
         }
     }
 
-    public Task<IReadOnlyList<WidgetConfigDto>> GetWidgetsAsync(bool includePrivate, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<WidgetConfigDto>> GetWidgetsAsync(bool includePrivate, CancellationToken cancellationToken = default)
     {
-        var filtered = DefaultSeedWidgets
+        try
+        {
+            var url = $"api/items/{PartitionKeys.Widgets}?includePrivate={includePrivate.ToString().ToLowerInvariant()}";
+            var items = await httpClient.GetFromJsonAsync<List<WidgetConfigDto>>(url, cancellationToken);
+            if (items is not null)
+            {
+                return items
+                    .Where(w => includePrivate || !w.IsPrivate)
+                    .OrderBy(w => w.SortOrder)
+                    .ToList();
+            }
+        }
+        catch
+        {
+            // Fallback to offline defaults if API host is not running
+        }
+
+        return OfflineFallbackWidgets
             .Where(w => includePrivate || !w.IsPrivate)
             .OrderBy(w => w.SortOrder)
             .ToList();
+    }
 
-        return Task.FromResult<IReadOnlyList<WidgetConfigDto>>(filtered);
+    public async Task<WidgetConfigDto?> SaveWidgetAsync(WidgetConfigDto widget, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/items/{PartitionKeys.Widgets}", widget, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WidgetConfigDto>(cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> DeleteWidgetAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.DeleteAsync($"api/items/{PartitionKeys.Widgets}/{Uri.EscapeDataString(id)}", cancellationToken);
+        return response.IsSuccessStatusCode;
+    }
+
+    public async Task<IReadOnlyList<T>> GetItemsAsync<T>(string partitionKey, CancellationToken cancellationToken = default)
+    {
+        var items = await httpClient.GetFromJsonAsync<List<T>>($"api/items/{partitionKey}", cancellationToken);
+        return items ?? [];
+    }
+
+    public async Task<T?> UpsertItemAsync<T>(string partitionKey, T item, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync($"api/items/{partitionKey}", item, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> DeleteItemAsync(string partitionKey, string id, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.DeleteAsync($"api/items/{partitionKey}/{Uri.EscapeDataString(id)}", cancellationToken);
+        return response.IsSuccessStatusCode;
     }
 }

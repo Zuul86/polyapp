@@ -5,7 +5,7 @@
         <div>
             <h2 class="widget-title">Mini-App Quick Launcher</h2>
             <p class="widget-subtitle">
-                @(IncludePrivate ? "Public & private self-hosted tools" : "Public tools & mini-apps")
+                @(IncludePrivate ? "Public & private self-hosted tools (backed by /api/items/widgets)" : "Public tools & mini-apps (backed by /api/items/widgets)")
             </p>
         </div>
 
@@ -15,8 +15,42 @@
                    placeholder="Filter tiles..."
                    @bind="_searchText"
                    @bind:event="oninput" />
+            <button type="button" class="btn btn-sm btn-outline-info" @onclick="ToggleAddForm">
+                @(_showAddForm ? "Cancel" : "+ Add Tile")
+            </button>
         </div>
     </div>
+
+    @if (_showAddForm)
+    {
+        <div class="add-tile-form">
+            <div class="add-tile-row">
+                <input type="text" class="launcher-search" placeholder="Title (e.g. OctoPrint)" @bind="_newTitle" />
+                <input type="text" class="launcher-search" placeholder="Category (e.g. 3D Printing)" @bind="_newCategory" />
+                <input type="text" class="launcher-search" placeholder="URL (https://...)" @bind="_newUrl" />
+            </div>
+            <div class="add-tile-row mt-2">
+                <input type="text" class="launcher-search flex-grow-1" placeholder="Short description" @bind="_newDescription" />
+                @if (IncludePrivate)
+                {
+                    <label class="private-checkbox-label">
+                        <input type="checkbox" @bind="_newIsPrivate" />
+                        Private Tile
+                    </label>
+                }
+                <button type="button"
+                        class="btn btn-sm btn-primary"
+                        disabled="@(string.IsNullOrWhiteSpace(_newTitle) || string.IsNullOrWhiteSpace(_newUrl) || _isSaving)"
+                        @onclick="SaveNewTileAsync">
+                    @(_isSaving ? "Saving..." : "Save to UserItems")
+                </button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <div class="text-danger small mt-2">@_errorMessage</div>
+            }
+        </div>
+    }
 
     @if (_widgets.Count == 0)
     {
@@ -27,28 +61,38 @@
         <div class="launcher-grid">
             @foreach (var tile in FilteredWidgets)
             {
-                <a class="launcher-tile @(tile.IsPrivate ? "private-tile" : "")"
-                   href="@tile.Url"
-                   target="@(tile.IsInternal ? "_self" : "_blank")"
-                   rel="@(tile.IsInternal ? "" : "noopener noreferrer")">
+                <div class="launcher-tile @(tile.IsPrivate ? "private-tile" : "")">
                     <div class="tile-top">
                         <span class="tile-category">@tile.Category</span>
-                        @if (tile.IsPrivate)
-                        {
-                            <span class="tile-lock-badge">Private</span>
-                        }
-                        else if (tile.IsInternal)
-                        {
-                            <span class="tile-internal-badge">In-App</span>
-                        }
+                        <div class="tile-badges">
+                            @if (tile.IsPrivate)
+                            {
+                                <span class="tile-lock-badge">Private</span>
+                            }
+                            else if (tile.IsInternal)
+                            {
+                                <span class="tile-internal-badge">In-App</span>
+                            }
+                            <button type="button"
+                                    class="tile-delete-btn"
+                                    title="Remove tile from UserItems"
+                                    @onclick="() => DeleteTileAsync(tile.Id)">
+                                ×
+                            </button>
+                        </div>
                     </div>
-                    <h3 class="tile-title">@tile.Title</h3>
-                    <p class="tile-desc">@tile.Description</p>
-                    <div class="tile-footer">
-                        <span class="tile-url">@tile.Url</span>
-                        <span class="tile-arrow">→</span>
-                    </div>
-                </a>
+                    <a class="tile-body-link"
+                       href="@tile.Url"
+                       target="@(tile.IsInternal ? "_self" : "_blank")"
+                       rel="@(tile.IsInternal ? "" : "noopener noreferrer")">
+                        <h3 class="tile-title">@tile.Title</h3>
+                        <p class="tile-desc">@tile.Description</p>
+                        <div class="tile-footer">
+                            <span class="tile-url">@tile.Url</span>
+                            <span class="tile-arrow">→</span>
+                        </div>
+                    </a>
+                </div>
             }
         </div>
     }
@@ -60,6 +104,15 @@
 
     private IReadOnlyList<WidgetConfigDto> _widgets = [];
     private string _searchText = string.Empty;
+    private bool _showAddForm;
+    private bool _isSaving;
+    private string? _errorMessage;
+
+    private string _newTitle = string.Empty;
+    private string _newCategory = "Custom";
+    private string _newUrl = string.Empty;
+    private string _newDescription = string.Empty;
+    private bool _newIsPrivate;
 
     private IEnumerable<WidgetConfigDto> FilteredWidgets =>
         string.IsNullOrWhiteSpace(_searchText)
@@ -71,6 +124,67 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        await LoadWidgetsAsync();
+    }
+
+    private async Task LoadWidgetsAsync()
+    {
         _widgets = await ApiClient.GetWidgetsAsync(IncludePrivate);
+    }
+
+    private void ToggleAddForm()
+    {
+        _showAddForm = !_showAddForm;
+        _errorMessage = null;
+    }
+
+    private async Task SaveNewTileAsync()
+    {
+        _isSaving = true;
+        _errorMessage = null;
+        try
+        {
+            var newTile = new WidgetConfigDto
+            {
+                Id = $"widget-{Guid.NewGuid():N}"[..16],
+                Title = _newTitle.Trim(),
+                Category = string.IsNullOrWhiteSpace(_newCategory) ? "Custom" : _newCategory.Trim(),
+                Url = _newUrl.Trim(),
+                Description = _newDescription.Trim(),
+                IsPrivate = IncludePrivate && _newIsPrivate,
+                IsInternal = _newUrl.StartsWith('/'),
+                SortOrder = _widgets.Count + 1
+            };
+
+            await ApiClient.SaveWidgetAsync(newTile);
+            _newTitle = string.Empty;
+            _newUrl = string.Empty;
+            _newDescription = string.Empty;
+            _showAddForm = false;
+            await LoadWidgetsAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to save tile: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    private async Task DeleteTileAsync(string id)
+    {
+        try
+        {
+            if (await ApiClient.DeleteWidgetAsync(id))
+            {
+                await LoadWidgetsAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to delete tile: {ex.Message}";
+        }
     }
 }
