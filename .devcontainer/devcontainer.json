@@ -22,5 +22,9 @@
     }
   },
   "forwardPorts": [5000, 5001, 7071],
+  "mounts": [
+    "source=polyapp-gemini-data,target=/home/vscode/.gemini,type=volume"
+  ],
+  "onCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gemini",
   "postCreateCommand": "dotnet --info && func --version"
 }
