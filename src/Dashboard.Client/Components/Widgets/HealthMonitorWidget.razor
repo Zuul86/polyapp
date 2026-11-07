@@ -1,0 +1,105 @@
+@inject DashboardApiClient ApiClient
+@implements IDisposable
+
+<section class="widget-card health-widget">
+    <div class="widget-header">
+        <div>
+            <h2 class="widget-title">Backend Service Health Monitor</h2>
+            <p class="widget-subtitle">Azure Functions v4 (.NET 10 Isolated Worker)</p>
+        </div>
+
+        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="PollHealthAsync" disabled="@_isPolling">
+            @(_isPolling ? "Polling..." : "Refresh")
+        </button>
+    </div>
+
+    @if (_lastResult is null)
+    {
+        <div class="health-loading">Probing <code>/api/health</code>...</div>
+    }
+    else
+    {
+        <div class="health-status-banner @(_lastResult.IsOnline ? "healthy" : "degraded")">
+            <span class="status-indicator"></span>
+            <div class="status-main">
+                <strong>@(_lastResult.IsOnline ? (_lastResult.Payload?.Status ?? "Healthy") : "Unreachable")</strong>
+                <span class="status-sub">
+                    @(_lastResult.IsOnline
+                        ? $"Connected to {_lastResult.Payload?.Service}"
+                        : $"Backend offline ({_lastResult.ErrorMessage})")
+                </span>
+            </div>
+            <div class="latency-badge">
+                <span class="latency-value">@_lastResult.LatencyMs</span>
+                <span class="latency-unit">ms</span>
+            </div>
+        </div>
+
+        <div class="health-metrics-grid">
+            <div class="metric-box">
+                <span class="metric-label">Runtime</span>
+                <span class="metric-value">@(_lastResult.Payload?.Framework ?? "N/A")</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-label">Storage Mode</span>
+                <span class="metric-value">@(_lastResult.Payload?.StorageMode ?? "Offline")</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-label">Uptime</span>
+                <span class="metric-value">
+                    @(_lastResult.Payload is not null ? $"{_lastResult.Payload.UptimeSeconds}s" : "—")
+                </span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-label">Last Checked</span>
+                <span class="metric-value">@_lastCheckedLocal</span>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private HealthProbeResult? _lastResult;
+    private bool _isPolling;
+    private string _lastCheckedLocal = "Never";
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PollHealthAsync();
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(30));
+        _ = RunPeriodicProbeAsync(_cts.Token);
+    }
+
+    private async Task RunPeriodicProbeAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (_timer is not null && await _timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await PollHealthAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    private async Task PollHealthAsync()
+    {
+        _isPolling = true;
+        _lastResult = await ApiClient.ProbeHealthAsync();
+        _lastCheckedLocal = DateTime.Now.ToString("HH:mm:ss");
+        _isPolling = false;
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+        _timer?.Dispose();
+    }
+}

@@ -1,0 +1,26 @@
+@page "/private"
+@attribute [Authorize(Policy = "PrivateAccess")]
+
+<PageTitle>Private Dashboard • MiniAppHub</PageTitle>
+
+<div class="page-header">
+    <div>
+        <div class="view-pill private">Private View • Auth0 Protected</div>
+        <h1>Homelab & Self-Hosted Control Center</h1>
+        <p class="page-lead">
+            Authenticated view restricted via Auth0 RBAC and allowed email claim validation.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-primary" href="tools/token-generator">3D Token Generator</a>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="grid-col-main">
+        <QuickLauncherWidget IncludePrivate="true" />
+    </div>
+    <div class="grid-col-side">
+        <HealthMonitorWidget />
+    </div>
+</div>

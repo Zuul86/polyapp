@@ -1,39 +1,55 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Dashboard.Client</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
+﻿<div class="sidebar-header">
+    <a class="sidebar-brand" href="">
+        <span class="brand-cube">◆</span>
+        @if (!IsCollapsed)
+        {
+            <span class="brand-text">MiniAppHub</span>
+        }
+    </a>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
+<nav class="sidebar-nav">
+    <div class="nav-section-label">@(IsCollapsed ? "•••" : "VIEWS")</div>
+
+    <NavLink class="sidebar-link" href="" Match="NavLinkMatch.All" title="Public Dashboard">
+        <span class="nav-icon">🌐</span>
+        @if (!IsCollapsed)
+        {
+            <span>Public View</span>
+        }
+    </NavLink>
+
+    <NavLink class="sidebar-link" href="private" title="Private Dashboard (Auth0 Protected)">
+        <span class="nav-icon">🔒</span>
+        @if (!IsCollapsed)
+        {
+            <span>Private View</span>
+            <span class="nav-badge">Auth0</span>
+        }
+    </NavLink>
+
+    <div class="nav-section-label">@(IsCollapsed ? "•••" : "MINI-APPS")</div>
+
+    <NavLink class="sidebar-link" href="tools/token-generator" title="In-Browser 3D Token Generator">
+        <span class="nav-icon">🪙</span>
+        @if (!IsCollapsed)
+        {
+            <span>3D Token Generator</span>
+        }
+    </NavLink>
+</nav>
+
+@if (!IsCollapsed)
+{
+    <div class="sidebar-footer">
+        <div class="sidebar-footer-card">
+            <div class="footer-title">Stack Target</div>
+            <div class="footer-meta">.NET 10 • Blazor WASM • Azure Functions v4</div>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+    </div>
+}
 
 @code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    [Parameter]
+    public bool IsCollapsed { get; set; }
 }

@@ -1,7 +1,26 @@
-﻿@page "/"
+@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Public Dashboard • MiniAppHub</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="page-header">
+    <div>
+        <div class="view-pill public">Public View</div>
+        <h1>Personal Mini-App Dashboard</h1>
+        <p class="page-lead">
+            Unauthenticated public tools, live Azure Functions status, and browser-native mini-apps.
+        </p>
+    </div>
+    <div class="page-header-actions">
+        <a class="btn btn-primary" href="tools/token-generator">Launch 3D Token Generator</a>
+        <a class="btn btn-outline-secondary" href="private">Open Private View 🔒</a>
+    </div>
+</div>
 
-Welcome to your new app.
+<div class="dashboard-grid">
+    <div class="grid-col-main">
+        <QuickLauncherWidget IncludePrivate="false" />
+    </div>
+    <div class="grid-col-side">
+        <HealthMonitorWidget />
+    </div>
+</div>

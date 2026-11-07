@@ -1,0 +1,30 @@
+@page "/authentication/{action}"
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject Auth0Options AuthOptions
+@inject NavigationManager Navigation
+
+<PageTitle>Authentication • MiniAppHub</PageTitle>
+
+@if (AuthOptions.IsConfiguredForLiveOidc)
+{
+    <RemoteAuthenticatorView Action="@Action" />
+}
+else
+{
+    <div class="auth-gate-card">
+        <div class="auth-gate-badge">Local Dev Auth Mode Active</div>
+        <h2>Auth0 Local Fallback Mode</h2>
+        <p class="text-muted">
+            <code>Auth0:UseDevAuthFallback</code> is enabled in <code>wwwroot/appsettings.json</code>.
+            Use the <strong>Auth Mode</strong> switcher in the top bar to switch between
+            <strong>Public</strong>, <strong>Owner (Admin)</strong>, and <strong>Guest</strong> identities,
+            or set your Auth0 <code>Authority</code> and <code>ClientId</code> and set <code>UseDevAuthFallback</code> to <code>false</code>.
+        </p>
+        <a class="btn btn-primary" href="private">Continue to Private View</a>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Action { get; set; }
+}
