@@ -1,0 +1,35 @@
+name: CI Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10.0
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+          dotnet-quality: 'ga'
+
+      - name: Restore dependencies
+        run: dotnet restore MiniAppHub.slnx
+
+      - name: Build solution (Release)
+        run: dotnet build MiniAppHub.slnx --configuration Release --no-restore -warnaserror
+
+      - name: Verify Blazor WASM publish (Netlify target)
+        run: dotnet publish src/Dashboard.Client/Dashboard.Client.csproj --configuration Release --no-build --output release
