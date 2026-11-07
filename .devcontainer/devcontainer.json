@@ -1,0 +1,20 @@
+{
+  "name": "MiniAppHub (.NET 10)",
+  "image": "mcr.microsoft.com/devcontainers/dotnet:10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/node:2.1.1": {},
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {}
+  },
+  "forwardPorts": [
+    5000,
+    5001,
+    7071
+  ],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "google.google-antigravity"
+      ]
+    }
+  }
+}
