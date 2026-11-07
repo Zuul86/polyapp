@@ -1,0 +1,84 @@
+@inject Auth0Options AuthOptions
+@inject IServiceProvider Services
+@inject NavigationManager Navigation
+
+<header class="dashboard-topbar">
+    <div class="topbar-left">
+        <button type="button" class="sidebar-toggle-btn" @onclick="OnToggleSidebar" title="Toggle navigation sidebar">
+            <span class="toggle-bars">☰</span>
+        </button>
+        <div class="topbar-breadcrumb">
+            <span class="brand-dot"></span>
+            <span class="topbar-title">Personal Mini-App Hub</span>
+            <span class="topbar-tag">.NET 10 WASM</span>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        @if (!AuthOptions.IsConfiguredForLiveOidc && _devAuth is not null)
+        {
+            <div class="dev-auth-switcher" title="Local Auth0 Simulator (UseDevAuthFallback = true)">
+                <span class="dev-auth-label">Auth Mode:</span>
+                <button type="button"
+                        class="dev-mode-btn @(_devAuth.CurrentMode == DevAuthStateProvider.DevIdentityMode.Unauthenticated ? "active" : "")"
+                        @onclick="() => SetDevMode(DevAuthStateProvider.DevIdentityMode.Unauthenticated)">
+                    Public
+                </button>
+                <button type="button"
+                        class="dev-mode-btn @(_devAuth.CurrentMode == DevAuthStateProvider.DevIdentityMode.AuthorizedOwner ? "active" : "")"
+                        @onclick="() => SetDevMode(DevAuthStateProvider.DevIdentityMode.AuthorizedOwner)">
+                    Owner (Admin)
+                </button>
+                <button type="button"
+                        class="dev-mode-btn @(_devAuth.CurrentMode == DevAuthStateProvider.DevIdentityMode.UnauthorizedGuest ? "active" : "")"
+                        @onclick="() => SetDevMode(DevAuthStateProvider.DevIdentityMode.UnauthorizedGuest)">
+                    Guest
+                </button>
+            </div>
+        }
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="user-pill">
+                    <span class="status-dot online"></span>
+                    <span class="user-name">@(context.User.Identity?.Name ?? "Authenticated")</span>
+                    <span class="user-email">
+                        @(context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                          ?? context.User.FindFirst("email")?.Value)
+                    </span>
+                </div>
+                @if (AuthOptions.IsConfiguredForLiveOidc)
+                {
+                    <a class="btn btn-sm btn-outline-light" href="authentication/logout">Log out</a>
+                }
+            </Authorized>
+            <NotAuthorized>
+                <div class="user-pill anonymous">
+                    <span class="status-dot"></span>
+                    <span>Anonymous</span>
+                </div>
+                @if (AuthOptions.IsConfiguredForLiveOidc)
+                {
+                    <a class="btn btn-sm btn-primary" href="authentication/login">Log in</a>
+                }
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
+</header>
+
+@code {
+    [Parameter]
+    public EventCallback OnToggleSidebar { get; set; }
+
+    private DevAuthStateProvider? _devAuth;
+
+    protected override void OnInitialized()
+    {
+        _devAuth = Services.GetService(typeof(DevAuthStateProvider)) as DevAuthStateProvider;
+    }
+
+    private void SetDevMode(DevAuthStateProvider.DevIdentityMode mode)
+    {
+        _devAuth?.SetIdentityMode(mode);
+    }
+}

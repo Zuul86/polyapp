@@ -1,6 +1,31 @@
-﻿<Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+﻿<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly" NotFoundPage="typeof(Pages.NotFound)">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <div class="auth-gate-card">
+                        @if (context.User.Identity?.IsAuthenticated != true)
+                        {
+                            <div class="auth-gate-badge">Authentication Required</div>
+                            <h2>Sign in to access Private Dashboard</h2>
+                            <p class="text-muted">
+                                This view is protected via Auth0 OIDC and requires an authorized account or role claim.
+                            </p>
+                            <a class="btn btn-primary" href="authentication/login">Sign in with Auth0</a>
+                        }
+                        else
+                        {
+                            <div class="auth-gate-badge auth-gate-denied">Access Restricted (RBAC / Email Policy)</div>
+                            <h2>Insufficient Permissions</h2>
+                            <p class="text-muted">
+                                Signed in as <strong>@(context.User.Identity?.Name ?? "User")</strong>, which is not on the allowed private access list.
+                            </p>
+                            <a class="btn btn-outline-secondary" href="">Return to Public View</a>
+                        }
+                    </div>
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+    </Router>
+</CascadingAuthenticationState>
