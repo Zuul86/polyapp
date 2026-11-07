@@ -5,7 +5,7 @@
     "ghcr.io/devcontainers/features/node:2.1.1": {
       "version": "lts"
     },
-    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1.0.1": {
       "version": "4"
     },
     "ghcr.io/devcontainers/features/azure-cli:1": {},
@@ -17,14 +17,19 @@
         "ms-dotnettools.csdevkit",
         "ms-azuretools.vscode-azurefunctions",
         "ms-azuretools.vscode-bicep",
+        "azurite.azurite",
         "google.google-antigravity"
       ]
     }
   },
-  "forwardPorts": [5000, 5001, 7071],
+  "forwardPorts": [5000, 5001, 5215, 7071, 7091, 10000, 10001, 10002],
+  "containerEnv": {
+    "SSL_CERT_DIR": "/home/vscode/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
+  },
   "mounts": [
     "source=polyapp-gemini-data,target=/home/vscode/.gemini,type=volume"
   ],
   "onCreateCommand": "sudo chown -R vscode:vscode /home/vscode/.gemini",
-  "postCreateCommand": "dotnet --info && func --version"
+  "postCreateCommand": "dotnet dev-certs https --trust && npm install -g azurite && dotnet --info && func --version",
+  "postStartCommand": "dotnet dev-certs https --check --trust >/dev/null 2>&1 || dotnet dev-certs https --trust; mkdir -p /tmp/azurite && (bash -c 'echo >/dev/tcp/127.0.0.1/10000' >/dev/null 2>&1 || setsid azurite --silent --location /tmp/azurite --debug /tmp/azurite/debug.log </dev/null >/dev/null 2>&1 &)"
 }
