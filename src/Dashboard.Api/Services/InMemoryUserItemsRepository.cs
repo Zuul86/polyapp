@@ -215,5 +215,42 @@ public sealed class InMemoryUserItemsRepository : IUserItemsRepository
             ]
         };
         _store[(PartitionKeys.PrintHistory, samplePrint.Id)] = JsonSerializer.Serialize(samplePrint);
+
+        PrintStatusDto[] historyEntries =
+        [
+            new PrintStatusDto
+            {
+                Id = "job-history-01",
+                PrinterName = "Bambu Lab A1",
+                State = "Finished",
+                JobName = "Alignment_Pins_Test_v2.3mf",
+                ProgressPercent = 100,
+                CurrentLayer = 12,
+                TotalLayers = 12,
+                RemainingMinutes = 0,
+                NozzleTempCelsius = 28.0,
+                BedTempCelsius = 25.0,
+                UpdatedAtUtc = DateTimeOffset.UtcNow.AddHours(-3)
+            },
+            new PrintStatusDto
+            {
+                Id = "job-history-02",
+                PrinterName = "Bambu Lab A1",
+                State = "Finished",
+                JobName = "AMS_Lite_Spool_Clip_PETG.3mf",
+                ProgressPercent = 100,
+                CurrentLayer = 84,
+                TotalLayers = 84,
+                RemainingMinutes = 0,
+                NozzleTempCelsius = 26.0,
+                BedTempCelsius = 24.0,
+                UpdatedAtUtc = DateTimeOffset.UtcNow.AddHours(-14)
+            }
+        ];
+
+        foreach (var entry in historyEntries)
+        {
+            _store[(PartitionKeys.PrintHistory, entry.Id)] = JsonSerializer.Serialize(entry);
+        }
     }
 }

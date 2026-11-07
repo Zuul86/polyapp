@@ -1,0 +1,197 @@
+@inject DashboardApiClient ApiClient
+
+<section class="widget-card bambu-widget">
+    <div class="widget-header">
+        <div>
+            <h2 class="widget-title">Bambu Lab A1 Print Monitor</h2>
+            <p class="widget-subtitle">Home Assistant / BamBuddy MQTT Telemetry</p>
+        </div>
+
+        <div class="widget-actions">
+            <button type="button"
+                    class="btn btn-sm btn-outline-info"
+                    title="Simulate an incoming Home Assistant / BamBuddy MQTT webhook push to POST /api/print-status"
+                    disabled="@_isBusy"
+                    @onclick="SimulateMqttPushAsync">
+                @(_isBusy ? "Pushing..." : "Simulate MQTT Push")
+            </button>
+        </div>
+    </div>
+
+    @if (_feed?.Current is null)
+    {
+        <div class="empty-state">Loading Bambu Lab A1 status...</div>
+    }
+    else
+    {
+        var current = _feed.Current;
+        <div class="bambu-active-card">
+            <div class="bambu-status-top">
+                <div>
+                    <span class="bambu-printer-name">@current.PrinterName</span>
+                    <h3 class="bambu-job-name">@current.JobName</h3>
+                </div>
+                <span class="bambu-state-pill @GetStateCssClass(current.State)">
+                    @current.State
+                </span>
+            </div>
+
+            <div class="bambu-progress-track">
+                <div class="bambu-progress-fill" style="width: @(Math.Clamp(current.ProgressPercent, 0, 100))%;"></div>
+            </div>
+
+            <div class="bambu-progress-meta">
+                <span><strong>@current.ProgressPercent%</strong> complete</span>
+                <span>Layer <strong>@current.CurrentLayer</strong> / @current.TotalLayers</span>
+                <span>ETA: <strong>@(current.RemainingMinutes > 0 ? $"{current.RemainingMinutes}m" : "Done")</strong></span>
+            </div>
+
+            <div class="bambu-temps-row">
+                <div class="temp-pill">
+                    <span class="temp-label">Nozzle</span>
+                    <span class="temp-value">@($"{current.NozzleTempCelsius:F0}°C")</span>
+                </div>
+                <div class="temp-pill">
+                    <span class="temp-label">Textured PEI Bed</span>
+                    <span class="temp-value">@($"{current.BedTempCelsius:F0}°C")</span>
+                </div>
+            </div>
+
+            @if (current.FilamentSlots.Count > 0)
+            {
+                <div class="ams-section">
+                    <div class="ams-label">AMS Lite Filament Slots</div>
+                    <div class="ams-slots-grid">
+                        @foreach (var slot in current.FilamentSlots)
+                        {
+                            <div class="ams-slot @(slot.IsActive ? "active-slot" : "")">
+                                <span class="ams-swatch" style="background-color: @slot.ColorHex;"></span>
+                                <div class="ams-slot-info">
+                                    <span class="ams-slot-num">A@(slot.SlotIndex)</span>
+                                    <span class="ams-slot-mat">@slot.Material</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+
+        @if (_feed.RecentJobs.Count > 0)
+        {
+            <div class="bambu-history-section">
+                <div class="ams-label">Recent Print Jobs (<code>print-history</code>)</div>
+                <div class="bambu-history-list">
+                    @foreach (var job in _feed.RecentJobs.Take(4))
+                    {
+                        <div class="bambu-history-item">
+                            <div class="history-job-main">
+                                <span class="history-job-title">@job.JobName</span>
+                                <span class="history-job-meta">
+                                    Layers: @job.CurrentLayer/@job.TotalLayers • @job.UpdatedAtUtc.ToLocalTime().ToString("HH:mm")
+                                </span>
+                            </div>
+                            <span class="bambu-state-pill small @GetStateCssClass(job.State)">
+                                @job.State (@job.ProgressPercent%)
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</section>
+
+@code {
+    private PrintMonitorFeedDto? _feed;
+    private bool _isBusy;
+    private int _simulationStep;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeedAsync();
+    }
+
+    private async Task LoadFeedAsync()
+    {
+        _feed = await ApiClient.GetPrintMonitorFeedAsync();
+    }
+
+    private async Task SimulateMqttPushAsync()
+    {
+        _isBusy = true;
+        try
+        {
+            _simulationStep = (_simulationStep + 1) % 3;
+
+            var simulatedStatus = _simulationStep switch
+            {
+                1 => new PrintStatusDto
+                {
+                    Id = $"sim-job-{DateTimeOffset.UtcNow:HHmmss}",
+                    PrinterName = "Bambu Lab A1",
+                    State = "Printing",
+                    JobName = "Dual_Split_Token_40mm_PLA.3mf",
+                    ProgressPercent = 90,
+                    CurrentLayer = 18,
+                    TotalLayers = 20,
+                    RemainingMinutes = 3,
+                    NozzleTempCelsius = 220.0,
+                    BedTempCelsius = 60.0,
+                    FilamentSlots = DefaultSlots(activeSlot: 4)
+                },
+                2 => new PrintStatusDto
+                {
+                    Id = $"sim-job-{DateTimeOffset.UtcNow:HHmmss}",
+                    PrinterName = "Bambu Lab A1",
+                    State = "Finished",
+                    JobName = "Dual_Split_Token_40mm_PLA.3mf",
+                    ProgressPercent = 100,
+                    CurrentLayer = 20,
+                    TotalLayers = 20,
+                    RemainingMinutes = 0,
+                    NozzleTempCelsius = 38.0,
+                    BedTempCelsius = 32.0,
+                    FilamentSlots = DefaultSlots(activeSlot: 0)
+                },
+                _ => new PrintStatusDto
+                {
+                    Id = $"sim-job-{DateTimeOffset.UtcNow:HHmmss}",
+                    PrinterName = "Bambu Lab A1",
+                    State = "Printing",
+                    JobName = "Custom_Keyway_Coin_45mm_PETG.3mf",
+                    ProgressPercent = 45,
+                    CurrentLayer = 9,
+                    TotalLayers = 20,
+                    RemainingMinutes = 14,
+                    NozzleTempCelsius = 245.0,
+                    BedTempCelsius = 70.0,
+                    FilamentSlots = DefaultSlots(activeSlot: 3)
+                }
+            };
+
+            await ApiClient.PostPrintStatusAsync(simulatedStatus);
+            await LoadFeedAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static IReadOnlyList<FilamentSlotDto> DefaultSlots(int activeSlot) =>
+    [
+        new FilamentSlotDto { SlotIndex = 1, Material = "PLA Basic", ColorHex = "#00AE42", IsActive = activeSlot == 1 },
+        new FilamentSlotDto { SlotIndex = 2, Material = "PLA Matte", ColorHex = "#1E293B", IsActive = activeSlot == 2 },
+        new FilamentSlotDto { SlotIndex = 3, Material = "PETG HF", ColorHex = "#38BDF8", IsActive = activeSlot == 3 },
+        new FilamentSlotDto { SlotIndex = 4, Material = "PLA Silk", ColorHex = "#F59E0B", IsActive = activeSlot == 4 }
+    ];
+
+    private static string GetStateCssClass(string state) => state.ToLowerInvariant() switch
+    {
+        "printing" => "printing",
+        "finished" => "finished",
+        "paused" => "paused",
+        _ => "idle"
+    };
+}

@@ -2,10 +2,69 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Launch Dashboard.Client (HTTP)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (client)",
+      "program": "dotnet",
+      "args": [
+        "run",
+        "--no-build",
+        "--project",
+        "${workspaceFolder}/src/Dashboard.Client/Dashboard.Client.csproj",
+        "--launch-profile",
+        "http"
+      ],
+      "cwd": "${workspaceFolder}/src/Dashboard.Client",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
+      "name": "Launch Dashboard.Client (HTTPS)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build (client)",
+      "program": "dotnet",
+      "args": [
+        "run",
+        "--no-build",
+        "--project",
+        "${workspaceFolder}/src/Dashboard.Client/Dashboard.Client.csproj",
+        "--launch-profile",
+        "https"
+      ],
+      "cwd": "${workspaceFolder}/src/Dashboard.Client",
+      "stopAtEntry": false,
+      "serverReadyAction": {
+        "action": "openExternally",
+        "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+      },
+      "env": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    {
       "name": "Attach to .NET Functions",
       "type": "coreclr",
       "request": "attach",
       "processId": "${command:azureFunctions.pickProcess}"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack (Client + Functions API)",
+      "preLaunchTask": "build (functions)",
+      "configurations": [
+        "Attach to .NET Functions",
+        "Launch Dashboard.Client (HTTP)"
+      ],
+      "stopAll": true
     }
   ]
 }

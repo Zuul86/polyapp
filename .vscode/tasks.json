@@ -2,6 +2,20 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "start (azurite)",
+      "type": "shell",
+      "command": "mkdir -p /tmp/azurite && (command -v azurite >/dev/null 2>&1 || npm install -g azurite) && if ! (echo >/dev/tcp/127.0.0.1/10000) >/dev/null 2>&1; then setsid azurite --silent --location /tmp/azurite --debug /tmp/azurite/debug.log </dev/null >/dev/null 2>&1 & for i in $(seq 1 50); do (echo >/dev/tcp/127.0.0.1/10000) >/dev/null 2>&1 && break; sleep 0.2; done; fi",
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": [
+            "-c"
+          ]
+        }
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "clean (functions)",
       "command": "dotnet",
       "args": [
@@ -24,7 +38,7 @@
         "/consoleloggerparameters:NoSummary"
       ],
       "type": "process",
-      "dependsOn": "clean (functions)",
+      "dependsOn": "start (azurite)",
       "group": {
         "kind": "build",
         "isDefault": true
@@ -80,6 +94,36 @@
       ],
       "isBackground": true,
       "problemMatcher": "$func-dotnet-watch"
+    },
+    {
+      "label": "trust (dev-certs)",
+      "type": "shell",
+      "command": "export SSL_CERT_DIR=\"$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs\" && (dotnet dev-certs https --check --trust >/dev/null 2>&1 || dotnet dev-certs https --trust)",
+      "options": {
+        "shell": {
+          "executable": "/bin/bash",
+          "args": [
+            "-c"
+          ]
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build (client)",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/Dashboard.Client/Dashboard.Client.csproj",
+        "/property:GenerateFullPaths=true",
+        "/consoleloggerparameters:NoSummary"
+      ],
+      "type": "process",
+      "dependsOn": "trust (dev-certs)",
+      "problemMatcher": "$msCompile",
+      "options": {
+        "cwd": "${workspaceFolder}/src/Dashboard.Client"
+      }
     }
   ]
 }

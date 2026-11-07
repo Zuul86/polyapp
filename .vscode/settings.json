@@ -5,5 +5,7 @@
     "debug.internalConsoleOptions": "neverOpen",
     "azureFunctions.projectSubpath": "src/Dashboard.Api",
     "azureFunctions.preDeployTask": "publish (functions)",
+    "azurite.location": "/tmp/azurite",
+    "azurite.silent": true,
     "antigravity.enableInlineDiff": true
 }
