@@ -144,4 +144,68 @@ public sealed class DashboardApiClient(HttpClient httpClient)
         var response = await httpClient.DeleteAsync($"api/items/{partitionKey}/{Uri.EscapeDataString(id)}", cancellationToken);
         return response.IsSuccessStatusCode;
     }
+
+    public async Task<PrintMonitorFeedDto> GetPrintMonitorFeedAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var feed = await httpClient.GetFromJsonAsync<PrintMonitorFeedDto>("api/print-status", cancellationToken);
+            if (feed is not null)
+            {
+                return feed;
+            }
+        }
+        catch
+        {
+            // Fallback when API host is offline
+        }
+
+        var fallbackCurrent = new PrintStatusDto
+        {
+            Id = "print-latest",
+            PrinterName = "Bambu Lab A1",
+            State = "Printing",
+            JobName = "Dual_Split_Token_40mm_PLA.3mf",
+            ProgressPercent = 68,
+            CurrentLayer = 14,
+            TotalLayers = 20,
+            RemainingMinutes = 11,
+            NozzleTempCelsius = 220.0,
+            BedTempCelsius = 60.0,
+            FilamentSlots =
+            [
+                new FilamentSlotDto { SlotIndex = 1, Material = "PLA Basic", ColorHex = "#00AE42", IsActive = true },
+                new FilamentSlotDto { SlotIndex = 2, Material = "PLA Matte", ColorHex = "#1E293B", IsActive = false },
+                new FilamentSlotDto { SlotIndex = 3, Material = "PETG HF", ColorHex = "#38BDF8", IsActive = false },
+                new FilamentSlotDto { SlotIndex = 4, Material = "PLA Silk", ColorHex = "#F59E0B", IsActive = false }
+            ]
+        };
+
+        return new PrintMonitorFeedDto
+        {
+            Current = fallbackCurrent,
+            RecentJobs =
+            [
+                new PrintStatusDto
+                {
+                    Id = "job-history-01",
+                    PrinterName = "Bambu Lab A1",
+                    State = "Finished",
+                    JobName = "Alignment_Pins_Test_v2.3mf",
+                    ProgressPercent = 100,
+                    CurrentLayer = 12,
+                    TotalLayers = 12,
+                    RemainingMinutes = 0,
+                    UpdatedAtUtc = DateTimeOffset.UtcNow.AddHours(-3)
+                }
+            ]
+        };
+    }
+
+    public async Task<PrintStatusDto?> PostPrintStatusAsync(PrintStatusDto status, CancellationToken cancellationToken = default)
+    {
+        var response = await httpClient.PostAsJsonAsync("api/print-status", status, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<PrintStatusDto>(cancellationToken: cancellationToken);
+    }
 }

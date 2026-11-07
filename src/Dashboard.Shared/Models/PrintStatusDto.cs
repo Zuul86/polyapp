@@ -58,3 +58,15 @@ public sealed record PrintStatusDto : CosmosDocument
     [JsonPropertyName("filamentSlots")]
     public IReadOnlyList<FilamentSlotDto> FilamentSlots { get; init; } = [];
 }
+
+/// <summary>
+/// Response contract returned by <c>GET /api/print-status</c> combining current telemetry and recent print history.
+/// </summary>
+public sealed record PrintMonitorFeedDto
+{
+    [JsonPropertyName("current")]
+    public PrintStatusDto? Current { get; init; }
+
+    [JsonPropertyName("recentJobs")]
+    public IReadOnlyList<PrintStatusDto> RecentJobs { get; init; } = [];
+}
