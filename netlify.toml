@@ -1,0 +1,11 @@
+[build]
+  publish = "release/wwwroot"
+  command = "dotnet publish src/Dashboard.Client/Dashboard.Client.csproj -c Release -o release"
+
+[build.environment]
+  DOTNET_VERSION = "10.0"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

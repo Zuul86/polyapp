@@ -2,19 +2,24 @@
   "name": "MiniAppHub (.NET 10)",
   "image": "mcr.microsoft.com/devcontainers/dotnet:10.0",
   "features": {
-    "ghcr.io/devcontainers/features/node:2.1.1": {},
-    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {}
+    "ghcr.io/devcontainers/features/node:2.1.1": {
+      "version": "lts"
+    },
+    "ghcr.io/jlaundry/devcontainer-features/azure-functions-core-tools:1": {
+      "version": "4"
+    },
+    "ghcr.io/devcontainers/features/azure-cli:1": {}
   },
-  "forwardPorts": [
-    5000,
-    5001,
-    7071
-  ],
   "customizations": {
     "vscode": {
       "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-azuretools.vscode-azurefunctions",
+        "ms-azuretools.vscode-bicep",
         "google.google-antigravity"
       ]
     }
-  }
+  },
+  "forwardPorts": [5000, 5001, 7071],
+  "postCreateCommand": "dotnet --info && func --version"
 }
